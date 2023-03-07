@@ -1,3 +1,5 @@
+## Python ##
+
 __pycache__
 *.py[cod]
 *$py.class
@@ -65,7 +67,7 @@ env/
 venv/
 ENV/
 
-# Visual Studio Code # 
+# Visual Studio Code 
 .vscode/* 
 !.vscode/settings.json 
 !.vscode/tasks.json 
