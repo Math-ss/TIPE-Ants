@@ -89,7 +89,7 @@ class ACO(object):
         """Returns the heuristic information for the edge between  the node `start` and `end`"""
         pass 
 
-    def _ApplyPolicy(self, current : int, adj : list) -> float:
+    def _ApplyPolicy(self, current : int, adj : list) -> int:
         """
         Determines the next node where to go for the calling ant. Parameters:
             - `current` : current node of the ant
