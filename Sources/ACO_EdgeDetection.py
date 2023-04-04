@@ -5,15 +5,13 @@ import numpy as np
 
 from ACO_Interface import ACO
 
-
 class EdgeFinder(ACO):
-
     @staticmethod
-    def graphgenerator(nom : str, f : function, neighbourhood : list):
+    def graphgenerator(nom, f, neighbourhood,diameter):
         """Creates a graph with each node representing a pixel, without including the two bordering rows.
         f is the fonction used to calculate the contrast of the neighbourhood of each node.
         neighbourhood has to be a int*int list, for instance following Tian, Yu and Xie definition,
-        neighbourhhod is [(-2,-1),(-2,+1),(-1,2),(-1,-2),(-1,-1),(-1,0),(-1,+1),(0,+1)]"""
+        neighbourhhod is [ (-2,-1) , (-2,+1) , (-1,2) , (-1,-2) , (-1,-1) , (-1,0) , (-1,+1) , (0,+1) ]"""
         #1. Creation of numpy array
         imgpil = Image.open(nom)
         imggray = ImageOps.grayscale(imgpil) 
@@ -26,28 +24,28 @@ class EdgeFinder(ACO):
         def Contrast(x,y) :
             sum = 0
             for (i,j) in neighbourhood:
-                sum += abs(img[x+i,y+j]-img[x-i,y-j])
+                sum += abs(img[y+j,x+i]-img[y-j,x-i]) #numpy arrays follow the structure [line,column] ie [ordinate,column]
             return f(sum) #Will vary depending of the function f used
     
         def heuristicsum():
             sum = 0
-            for i in range(2,abscmax-2):
-                for j in range(2,ordmax-2):
+            for i in range(diameter,abscmax-diameter):
+                for j in range(diameter,ordmax-diameter):
                     sum += Contrast(i,j)
             return(sum)
     
         normalfactor = heuristicsum() #Normalization factor of the graph
 
-        for absciss in range(2,abscmax-2):
-            for ordinate in range(2,ordmax-2):
-                G.add_nodes((absciss,ordinate), heuristic = (Contrast(absciss,ordinate,2,2)/normalfactor))
+        for absciss in range(diameter,abscmax-diameter):
+            for ordinate in range(diameter,ordmax-diameter):
+                G.add_node((absciss,ordinate), heuristic = (Contrast(absciss,ordinate)/normalfactor))
         
         #3. Creation of edges
 
-        for absciss in range(2,abscmax-2):
-            for ordinate in range(2,ordmax-2):
-                liste1 = [(absciss,ordinate),(absciss+i,ordinate+j) for (i,j) in neighbourhood if (absciss+i)<= abscmax-2 and (absciss+i) >= 2 and (ordinate+j) <= ordmax-2 and (ordinate+j) >= 2 ]
-                liste2 = [(absciss,ordinate),(absciss-i,ordinate-j) for (i,j) in neighbourhood if (absciss-i)<= abscmax-2 and (absciss-i) >= 2 and (ordinate-j) <= ordmax-2 and (ordinate-j) >= 2 ]
+        for absciss in range(diameter,abscmax-diameter):
+            for ordinate in range(diameter,ordmax-diameter):
+                liste1 = [((absciss,ordinate),(absciss+i,ordinate+j)) for (i,j) in neighbourhood if (absciss+i)<= abscmax-2 and (absciss+i) >= 2 and (ordinate+j) <= ordmax-2 and (ordinate+j) >= 2 ]
+                liste2 = [((absciss,ordinate),(absciss-i,ordinate-j)) for (i,j) in neighbourhood if (absciss-i)<= abscmax-2 and (absciss-i) >= 2 and (ordinate-j) <= ordmax-2 and (ordinate-j) >= 2 ]
                 G.add_edges_from(liste1+liste2)
         
         G.nodes[(2,2)]["size"] = (abscmax,ordmax)
@@ -101,4 +99,3 @@ class EdgeFinder(ACO):
                 if Graph.nodes[(i,j)]["pheromone"] > threshold :
                     imgres.putpixel((i,j),(0,0,0))
         imgres.show()        
-
