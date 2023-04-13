@@ -7,7 +7,7 @@ from ACO_Interface import ACO
 
 class EdgeFinder(ACO):
     @staticmethod
-    def graphgenerator(nom, f, neighbourhood,diameter):
+    def graphgenerator(nom, f, neighbourhood, diameter):
         """Creates a graph with each node representing a pixel, without including the two bordering rows.
         f is the fonction used to calculate the contrast of the neighbourhood of each node.
         neighbourhood has to be a int*int list, for instance following Tian, Yu and Xie definition,
@@ -44,8 +44,8 @@ class EdgeFinder(ACO):
 
         for absciss in range(diameter,abscmax-diameter):
             for ordinate in range(diameter,ordmax-diameter):
-                liste1 = [((absciss,ordinate),(absciss+i,ordinate+j)) for (i,j) in neighbourhood if (absciss+i)<= abscmax-2 and (absciss+i) >= 2 and (ordinate+j) <= ordmax-2 and (ordinate+j) >= 2 ]
-                liste2 = [((absciss,ordinate),(absciss-i,ordinate-j)) for (i,j) in neighbourhood if (absciss-i)<= abscmax-2 and (absciss-i) >= 2 and (ordinate-j) <= ordmax-2 and (ordinate-j) >= 2 ]
+                liste1 = [((absciss,ordinate),(absciss+i,ordinate+j)) for (i,j) in neighbourhood if (absciss+i)<= abscmax-3 and (absciss+i) >= 2 and (ordinate+j) <= ordmax-3 and (ordinate+j) >= 2 ]
+                liste2 = [((absciss,ordinate),(absciss-i,ordinate-j)) for (i,j) in neighbourhood if (absciss-i)<= abscmax-3 and (absciss-i) >= 2 and (ordinate-j) <= ordmax-3 and (ordinate-j) >= 2 ]
                 G.add_edges_from(liste1+liste2)
         
         G.nodes[(2,2)]["size"] = (abscmax,ordmax)
@@ -55,11 +55,19 @@ class EdgeFinder(ACO):
         super().__init__(workGraph) #Assumes the wanted heuristic matrix is already stored inside the graph...
 
         # Specific initialisation 
-        nx.set_node_attributes(self._graph, 0.5, "pheromone")
+        nx.set_node_attributes(self._graph, 1e-3, "pheromone")
+        abs, ord = self._graph.nodes[(2,2)]["size"]
+
+        self.alpha = 1.0
+        self._beta = 0.3
+        self.evaporationRate = 0.1
+        self._decayCoefficient = 0.05
+
         self._consecutiveMoves = 40
-        self._antsLocation = [(rd.randrange(0, 1), rd.randrange(0, 1)) for k in range(self._antsByGeneration)] #BUG : Not correct initialisation of position : needs dimensions
-        self._decayCoefficient = 0.5
-        self._evaporationLower = 0.5
+        self._evaporationLower = 1e-3
+
+        self._antsByGeneration = 500
+        self._antsLocation = [(rd.randrange(2, abs - 3), rd.randrange(2, ord - 3)) for k in range(self._antsByGeneration)] #BUG : Not correct initialisation of position : needs dimensions
 
     def LaunchAntCycle(self, iteration: int) -> None:
         for i in range(iteration):
@@ -89,6 +97,9 @@ class EdgeFinder(ACO):
         for node in self._graph.nodes:
             self._graph.nodes[node]["pheromone"] = (1 - self._decayCoefficient) * self._graph.nodes[node]["pheromone"] + self._decayCoefficient * self._evaporationLower
 
+    def _PheromoneInfo(self, start: int, end : int) -> float:
+        return self._graph.nodes[end]["pheromone"]
+
     def _DetermineAdjacent(self, index: int, partialSolution: list) -> list:
         current = partialSolution[index]
         return list(self._graph.neighbors(current)) #ENH : If we could do away with this copy, it could save a lot of space
@@ -98,12 +109,12 @@ class EdgeFinder(ACO):
     
     def _DetermineBestSolution(self) -> None:
         max = 0; abs, ord = self._graph.nodes[(2,2)]["size"]
-        self._bestSolutionSoFar = self._graph.copy()
+        #self._bestSolutionSoFar = self._graph.copy()
 
         for node in self._graph.nodes:
             if self._graph.nodes[node]["pheromone"] > max : max = self._graph.nodes[node]["pheromone"]
         for node in self._graph.nodes:
-            self._bestSolutionSoFar[0].nodes[node]["gradient"] = self._graph.nodes[node]["pheromone"] / self._graph.nodes[node]["pheromone"]
+            self._graph.nodes[node]["gradient"] = self._graph.nodes[node]["pheromone"] / max
         
     def _CostFunction(self, s: list) -> float:
         sum = 1e-6 #To avoid zero
@@ -111,13 +122,14 @@ class EdgeFinder(ACO):
             sum += self._graph.nodes[s[i]]["heuristic"]
         return sum
 
-    def _Graphreader(self, Graph : nx.DiGraph, threshold : float) -> None:
+    def _Graphreader(self) -> None:
         """Reads the pheromone values on the graph and colors the corresponding pixel if the pheromone level
         is higher than the given threshold"""
+        Graph = self._graph
         (abscmax,ordmax) = Graph.nodes[(2,2)]["size"]
         imgres = Image.new('RGB',(abscmax,ordmax),"black")
         for i in range(2,abscmax-2):
             for j in range(2,ordmax-2):
-                if Graph.nodes[(i,j)]["pheromone"] > threshold :
-                    imgres.putpixel((i,j),(0,0,0))
+                    g = int(255 * (Graph.nodes[(i,j)]["gradient"]))
+                    imgres.putpixel((i,j),(g,g,g))
         imgres.show()        
