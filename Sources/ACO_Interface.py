@@ -11,9 +11,8 @@ class ACO(object):
     def __init__(self, workGraph : nx.Graph) -> None:
         """Creates a new colony working on the graph `workGraph`"""
 
-        #Constructing needed ants' data on the graph
+        #Constructing needed ants' data on the graph (problem specific...)
         self._graph = workGraph.copy()
-        nx.set_edge_attributes(self._graph, 0.5, "pheromone") #For instance we only permit single pheromone per edge, should be a hash-map in the end (dict)
         
         # Learning parmeters
         self._alpha = 0.0
@@ -86,8 +85,12 @@ class ACO(object):
         pass
 
     def _HeuristicInfo(self, start: int, end : int) -> float:
-        """Returns the heuristic information for the edge between  the node `start` and `end`"""
+        """Returns the heuristic information for the edge between  the node `start` and `end`."""
         pass 
+
+    def _PheromoneInfo(self, start: int, end : int) -> float:
+        """Returns the pheromone information for the edge between  the node `start` and `end`."""
+        return self._graph.edges[start, end]["pheromone"]
 
     def _ApplyPolicy(self, current : int, adj : list) -> int:
         """
@@ -100,12 +103,12 @@ class ACO(object):
         odds = [0.0] * len(adj)
         sum = 0.0
         for l in adj:
-            sum += pow(self._graph.edges[current, l]["pheromone"], self._alpha) * pow(self._HeuristicInfo(current, l), self._beta) 
+            sum += pow(self._PheromoneInfo(current, l), self._alpha) * pow(self._HeuristicInfo(current, l), self._beta) 
         
         min = 0.0
         for i in range(len(adj)):
             l = adj[i]
-            odds[i] = pow(self._graph.edges[current, l]["pheromone"], self._alpha) * pow(self._HeuristicInfo(current, l), self._beta)
+            odds[i] = pow(self._PheromoneInfo(current, l), self._alpha) * pow(self._HeuristicInfo(current, l), self._beta)
             odds[i] = min + (odds[i]/sum) #We add min to create a partition of [0;1]
             min = odds[i]
 
@@ -191,7 +194,8 @@ class TSP(ACO):
     def __init__(self, workGraph: nx.Graph) -> None:
         super().__init__(workGraph)
 
-        # Special initialisation
+        # Specific initialisation
+        nx.set_edge_attributes(self._graph, 0.5, "pheromone") #For instance we only permit single pheromone per edge, should be a hash-map in the end (dict)
         self._alpha = 1.0
         self._beta = 0.0
 
