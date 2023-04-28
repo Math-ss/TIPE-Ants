@@ -3,7 +3,7 @@ import random as rd
 from PIL import Image,ImageOps
 import numpy as np
 
-from ACO_Interface import ACO
+from Sources.ACO_Interface import ACO
 
 class EdgeFinder(ACO):
     @staticmethod
@@ -115,6 +115,8 @@ class EdgeFinder(ACO):
             if self._graph.nodes[node]["pheromone"] > max : max = self._graph.nodes[node]["pheromone"]
         for node in self._graph.nodes:
             self._graph.nodes[node]["gradient"] = self._graph.nodes[node]["pheromone"] / max
+
+        self._GraphReader()
         
     def _CostFunction(self, s: list) -> float:
         sum = 1e-6 #To avoid zero
@@ -122,7 +124,7 @@ class EdgeFinder(ACO):
             sum += self._graph.nodes[s[i]]["heuristic"]
         return sum
 
-    def _Graphreader(self) -> None:
+    def _GraphReader(self) -> None:
         """Reads the pheromone values on the graph and colors the corresponding pixel if the pheromone level
         is higher than the given threshold"""
         Graph = self._graph
@@ -132,4 +134,4 @@ class EdgeFinder(ACO):
             for j in range(2,ordmax-2):
                     g = int(255 * (Graph.nodes[(i,j)]["gradient"]))
                     imgres.putpixel((i,j),(g,g,g))
-        imgres.show()        
+        imgres.show()
