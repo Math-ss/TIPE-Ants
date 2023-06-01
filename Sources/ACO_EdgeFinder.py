@@ -2,6 +2,7 @@ import networkx as nx
 import random as rd
 from PIL import Image,ImageOps
 import numpy as np
+import time
 
 from Sources.ACO_Interface import ACO
 
@@ -21,24 +22,28 @@ class EdgeFinder(ACO):
         #2. graph initialization and creation of weighted nodes
         G = nx.DiGraph()
         
-        def Contrast(x,y) :
+        def RawContrast(x,y) :
             sum = 0
             for (i,j) in neighbourhood:
                 sum += abs(img[y+j,x+i]-img[y-j,x-i]) #numpy arrays follow the structure [line,column] ie [ordinate,column]
-            return f(sum) #Will vary depending of the function f used
+            return sum
+        
+        def Contrast(x, y, norm):
+            return f(RawContrast(x, y) / norm)
     
-        def heuristicsum():
-            sum = 0
-            for i in range(diameter,abscmax-diameter):
-                for j in range(diameter,ordmax-diameter):
-                    sum += Contrast(i,j)
-            return(sum)
-    
-        normalfactor = heuristicsum() #Normalization factor of the graph
+        maxRawContrast = 0.0
+        for i in range(diameter,abscmax-diameter):
+            for j in range(diameter,ordmax-diameter):
+                if RawContrast(i,j) > maxRawContrast : maxRawContrast = RawContrast(i,j)
+
+        sumContrast = 0.0
+        for i in range(diameter,abscmax-diameter):
+            for j in range(diameter,ordmax-diameter):
+                sumContrast += Contrast(i, j, maxRawContrast)
 
         for absciss in range(diameter,abscmax-diameter):
             for ordinate in range(diameter,ordmax-diameter):
-                G.add_node((absciss,ordinate), heuristic = (Contrast(absciss,ordinate)/normalfactor))
+                G.add_node((absciss,ordinate), heuristic = (Contrast(absciss, ordinate, maxRawContrast)/sumContrast))
         
         #3. Creation of edges
 
@@ -58,15 +63,15 @@ class EdgeFinder(ACO):
         nx.set_node_attributes(self._graph, 1e-3, "pheromone")
         abs, ord = self._graph.nodes[(2,2)]["size"]
 
-        self.alpha = 1.0
-        self._beta = 0.3
-        self.evaporationRate = 0.1
+        self.alpha = 10.0
+        self._beta = 1.0
+        self._evaporationRate = 0.1
         self._decayCoefficient = 0.05
 
         self._consecutiveMoves = 40
         self._evaporationLower = 1e-3
 
-        self._antsByGeneration = 500
+        self._antsByGeneration = 512
         self._antsLocation = [(rd.randrange(2, abs - 3), rd.randrange(2, ord - 3)) for k in range(self._antsByGeneration)] #BUG : Not correct initialisation of position : needs dimensions
 
     def LaunchAntCycle(self, iteration: int) -> None:
@@ -135,3 +140,4 @@ class EdgeFinder(ACO):
                     g = int(255 * (Graph.nodes[(i,j)]["gradient"]))
                     imgres.putpixel((i,j),(g,g,g))
         imgres.show()
+        imgres.save("Result_" + str(time.time_ns()) + ".png")

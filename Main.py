@@ -1,6 +1,7 @@
 import networkx as nx
 import matplotlib.pyplot as plt
 import random as rd
+import math as mt
 
 from Sources.ACO_EdgeFinder import EdgeFinder
 from Sources.ACO_TSP import TSP
@@ -25,5 +26,20 @@ print(solver2.bestSoFar)
 
 
 #2. Execution of the EdgeFinder
-finder = EdgeFinder(EdgeFinder.graphgenerator("./ImageTest.jpg", lambda x : x, [(-2,-1) , (-2,+1) , (-1,2) , (-1,-2) , (-1,-1) , (-1,0) , (-1,+1) , (0,+1)], 2))
+finder = EdgeFinder(EdgeFinder.graphgenerator("./ImageTest.png", lambda x : mt.sin(mt.pi*x/2), [(-2,-1) , (-2,+1) , (-1,2) , (-1,-2) , (-1,-1) , (-1,0) , (-1,+1) , (0,+1)], 2))
+finder.LaunchAntCycle(10)
+finder.LaunchAntCycle(10)
+finder.LaunchAntCycle(10)
+finder.LaunchAntCycle(10)
+finder.LaunchAntCycle(10)
+finder.LaunchAntCycle(10)
+finder.LaunchAntCycle(10)
+finder.LaunchAntCycle(10)
+finder.LaunchAntCycle(10)
+finder.LaunchAntCycle(10)
+finder.LaunchAntCycle(10)
+finder.LaunchAntCycle(10)
+finder.LaunchAntCycle(10)
+finder.LaunchAntCycle(10)
+finder.LaunchAntCycle(10)
 finder.LaunchAntCycle(10)

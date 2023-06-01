@@ -115,7 +115,7 @@ class ACO(object):
         # 2. Determination of the next node
         num  = rd.random()
         next = adj[len(adj) - 1]
-        for i in range(1, len(adj)):
+        for i in range(0, len(adj)):
             if num <= odds[i]:
                 next = adj[i]
                 break
