@@ -2,12 +2,13 @@ import networkx as nx
 import random as rd
 from PIL import Image,ImageOps
 import numpy as np
+import matplotlib.pyplot as plt
 
 from Sources.ACO_Interface import ACO
 
 class EdgeFinder(ACO):
     @staticmethod
-    def graphgenerator(nom, f, neighbourhood, diameter):
+    def GraphGenerator(nom, f, neighbourhood, diameter):
         """Creates a graph with each node representing a pixel, without including the two bordering rows.
         f is the fonction used to calculate the contrast of the neighbourhood of each node.
         neighbourhood has to be a int*int list, for instance following Tian, Yu and Xie definition,
@@ -20,7 +21,8 @@ class EdgeFinder(ACO):
 
         #2. graph initialization and creation of weighted nodes
         G = nx.DiGraph()
-        
+        L = []
+
         def Contrast(x,y) :
             sum = 0
             for (i,j) in neighbourhood:
@@ -39,6 +41,8 @@ class EdgeFinder(ACO):
         for absciss in range(diameter,abscmax-diameter):
             for ordinate in range(diameter,ordmax-diameter):
                 G.add_node((absciss,ordinate), heuristic = (Contrast(absciss,ordinate)/normalfactor))
+                if (Contrast(absciss,ordinate)/normalfactor) > 1e-10:
+                    L.append((absciss,ordinate)) 
         
         #3. Creation of edges
 
@@ -49,27 +53,30 @@ class EdgeFinder(ACO):
                 G.add_edges_from(liste1+liste2)
         
         G.nodes[(2,2)]["size"] = (abscmax,ordmax)
-        return G
+        return (G,L)
 
     def __init__(self, workGraph: nx.Graph) -> None:
-        super().__init__(workGraph) #Assumes the wanted heuristic matrix is already stored inside the graph...
-
+        a,liste = workGraph
+        super().__init__(a) #Assumes the wanted heuristic matrix is already stored inside the graph...
+        n = len(liste)
         # Specific initialisation 
         nx.set_node_attributes(self._graph, 1e-3, "pheromone")
         abs, ord = self._graph.nodes[(2,2)]["size"]
 
-        self.alpha = 1.0
-        self._beta = 0.3
+        self.alpha = 1
+        self._beta = 1
         self.evaporationRate = 0.1
         self._decayCoefficient = 0.05
+        self._cycles = 0
 
         self._consecutiveMoves = 40
-        self._evaporationLower = 1e-3
+        self._evaporationLower = 1e-4
 
-        self._antsByGeneration = 500
-        self._antsLocation = [(rd.randrange(2, abs - 3), rd.randrange(2, ord - 3)) for k in range(self._antsByGeneration)] #BUG : Not correct initialisation of position : needs dimensions
+        self._antsByGeneration = 512
+        self._antsLocation = [liste[rd.randint(0,n-1)] for k in range(self._antsByGeneration)]
 
     def LaunchAntCycle(self, iteration: int) -> None:
+        self._cycles = self._cycles + 1
         for i in range(iteration):
             self._SolutionConstruction()
             self._PheromoneUpdate()
@@ -115,7 +122,8 @@ class EdgeFinder(ACO):
             if self._graph.nodes[node]["pheromone"] > max : max = self._graph.nodes[node]["pheromone"]
         for node in self._graph.nodes:
             self._graph.nodes[node]["gradient"] = self._graph.nodes[node]["pheromone"] / max
-
+        
+        print(max)
         self._GraphReader()
         
     def _CostFunction(self, s: list) -> float:
@@ -134,4 +142,5 @@ class EdgeFinder(ACO):
             for j in range(2,ordmax-2):
                     g = int(255 * (Graph.nodes[(i,j)]["gradient"]))
                     imgres.putpixel((i,j),(g,g,g))
-        imgres.show()
+        imgres.save("res"+str(self._cycles)+".png")
+        
