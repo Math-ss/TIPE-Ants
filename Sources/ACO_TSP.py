@@ -80,7 +80,3 @@ class TSP(ACO):
         for i in range(len(s) - 1):
             sum += self._graph.edges[s[i], s[i+1]]["distance"]
         return sum
-
-    def _DetermineUpdateSolutions(self) -> None:
-        self._solutionsCost = [-1.0] * self._antsByGeneration
-        self._updateSolutions = self._iterationSolutions #Warning : not a real copy

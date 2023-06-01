@@ -67,6 +67,7 @@ class EdgeFinder(ACO):
         self._beta = 1.0
         self._evaporationRate = 0.1
         self._decayCoefficient = 0.05
+        self._successFactor = 0.9
 
         self._consecutiveMoves = 40
         self._evaporationLower = 1e-3
@@ -82,23 +83,35 @@ class EdgeFinder(ACO):
         self._DetermineBestSolution()
         
     def _SolutionConstruction(self) -> None:
+        self._iterationSolutions = []
+
         for ant in range(self._antsByGeneration):
-            localPath = [(0,0)] * (self._consecutiveMoves + 1)
-            localPath[0] = self._antsLocation[ant]
+            self._iterationSolutions.append([(0,0)] * (self._consecutiveMoves + 1))
+            self._iterationSolutions[ant][0] = self._antsLocation[ant]
 
             for step in range(self._consecutiveMoves):
-                adj = self._DetermineAdjacent(step, localPath)
+                adj = self._DetermineAdjacent(step, self._iterationSolutions[ant])
                 next = self._ApplyPolicy(self._antsLocation[ant], adj) #OK
                 self._antsLocation[ant] = next 
-                localPath[step + 1] = next
+                self._iterationSolutions[ant][step + 1] = next
 
             # Online pheromone update
             for i in range(1, self._consecutiveMoves + 1):
-                node = localPath[i]; phero = self._graph.nodes[node]["pheromone"]
+                node = self._iterationSolutions[ant][i]; phero = self._graph.nodes[node]["pheromone"]
                 self._graph.nodes[node]["pheromone"] = \
                     (1 - self._evaporationRate) * phero + self._evaporationRate * self._graph.nodes[node]["heuristic"]
                 
     def _PheromoneUpdate(self) -> None:
+        #1 Update "better solutions"
+        self._DetermineUpdateSolutions(); max = 0.0
+        for i in range(len(self._updateSolutions)): 
+            if self._CostFunctionOpt(i) > max : max = self._CostFunctionOpt(i)
+
+        for i in range(len(self._updateSolutions)):
+            for node in self._updateSolutions[i]:
+                self._graph.nodes[node]["pheromone"] *= self._successFactor * self._CostFunctionOpt(i) / max
+
+        #2. Global decay of the nodes
         for node in self._graph.nodes:
             self._graph.nodes[node]["pheromone"] = (1 - self._decayCoefficient) * self._graph.nodes[node]["pheromone"] + self._decayCoefficient * self._evaporationLower
 
@@ -124,7 +137,7 @@ class EdgeFinder(ACO):
         self._GraphReader()
         
     def _CostFunction(self, s: list) -> float:
-        sum = 1e-6 #To avoid zero
+        sum = 1e-16 #To avoid zero
         for i in range(len(s)):
             sum += self._graph.nodes[s[i]]["heuristic"]
         return sum
@@ -139,5 +152,4 @@ class EdgeFinder(ACO):
             for j in range(2,ordmax-2):
                     g = int(255 * (Graph.nodes[(i,j)]["gradient"]))
                     imgres.putpixel((i,j),(g,g,g))
-        imgres.show()
         imgres.save("Result_" + str(time.time_ns()) + ".png")

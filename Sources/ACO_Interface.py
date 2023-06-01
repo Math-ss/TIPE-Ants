@@ -167,7 +167,8 @@ class ACO(object):
         Components of these solutions will be updated and used to calculate pheromone updates. Other solutions are ignored
         It initializes according to the selected solutions the `self._solutionsCost` list with strictly negative values.
         """
-        pass
+        self._solutionsCost = [-1.0] * self._antsByGeneration
+        self._updateSolutions = self._iterationSolutions #Warning : not a real copy
 
     def _DaemonActions(self) -> None:
         pass
