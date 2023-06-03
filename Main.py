@@ -50,7 +50,7 @@ print(solver2.bestSoFar)'''
 
 
 #2. Execution of the EdgeFinder
-finder = EdgeFinder(EdgeFinder.GraphGenerator('.\\house.jpg',lambda x : x**2, [ (-2,-1) , (-2,+1) , (-1,2) , (-1,-2) , (-1,-1) , (-1,0) , (-1,+1) , (0,+1) ], 2))
+finder = EdgeFinder(EdgeFinder.GraphGenerator('.\\Lenna_(test_image).png',lambda x : x**2, [ (-2,-1) , (-2,+1) , (-1,2) , (-1,-2) , (-1,-1) , (-1,0) , (-1,+1) , (0,+1) ], 2))
 finder.LaunchAntCycle(10)
 finder.LaunchAntCycle(10)
 finder.LaunchAntCycle(10)

@@ -19,7 +19,8 @@ class ACO(object):
         self._beta = 0.0
         self._evaporationRate = 0.5
         self._antsByGeneration = 10
-        
+        self._q0 = 0
+
         #Solutions managment
         self._iterationSolutions = [[]] * self._antsByGeneration
         self._updateSolutions = []
@@ -98,27 +99,38 @@ class ACO(object):
             - `current` : current node of the ant
             - `adj`: list of addjacent node to the current node
         """
-
-        # 1. Determine odds for each node
-        odds = [0.0] * len(adj)
-        sum = 0.0
-        for l in adj:
-            sum += pow(self._PheromoneInfo(current, l), self._alpha) * pow(self._HeuristicInfo(current, l), self._beta) 
+        #0. Choice of method to determine next node based on q0 value
+        q = rd.random()
+        if q < self._q0 :
+            max = 0.
+            next = adj[0]
+            for l in adj :
+                value = pow(self._PheromoneInfo(current, l), self._alpha) * pow(self._HeuristicInfo(current, l), self._beta)
+                if value > max:
+                    max = value
+                    next = l
+        else :
+            # 1. Determine odds for each node
+            odds = [0.0] * len(adj)
+            sum = 0.0
+            for l in adj:
+                sum += pow(self._PheromoneInfo(current, l), self._alpha) * pow(self._HeuristicInfo(current, l), self._beta) 
         
-        min = 0.0
-        for i in range(len(adj)):
-            l = adj[i]
-            odds[i] = pow(self._PheromoneInfo(current, l), self._alpha) * pow(self._HeuristicInfo(current, l), self._beta)
-            odds[i] = min + (odds[i]/sum) #We add min to create a partition of [0;1]
-            min = odds[i]
+            min = 0.0
 
-        # 2. Determination of the next node
-        num  = rd.random()
-        next = adj[len(adj) - 1]
-        for i in range(1, len(adj)):
-            if num <= odds[i]:
-                next = adj[i]
-                break
+            for i in range(len(adj)):
+                l = adj[i]
+                odds[i] = pow(self._PheromoneInfo(current, l), self._alpha) * pow(self._HeuristicInfo(current, l), self._beta)
+                odds[i] = min + (odds[i]/sum) #We add min to create a partition of [0;1]
+                min = odds[i]
+
+            # 2. Determination of the next node
+            num  = rd.random()
+            next = adj[len(adj) - 1]
+            for i in range(0, len(adj)-1):
+                if num <= odds[i]:
+                    next = adj[i]
+                    break
         return next
 
     def _DetermineAdjacent(self, index : int, partialSolution : list) -> list:

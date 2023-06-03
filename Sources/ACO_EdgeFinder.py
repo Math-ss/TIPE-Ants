@@ -21,7 +21,6 @@ class EdgeFinder(ACO):
 
         #2. graph initialization and creation of weighted nodes
         G = nx.DiGraph()
-        L = []
 
         def Contrast(x,y) :
             sum = 0
@@ -41,8 +40,6 @@ class EdgeFinder(ACO):
         for absciss in range(diameter,abscmax-diameter):
             for ordinate in range(diameter,ordmax-diameter):
                 G.add_node((absciss,ordinate), heuristic = (Contrast(absciss,ordinate)/normalfactor))
-                if (Contrast(absciss,ordinate)/normalfactor) > 1e-10:
-                    L.append((absciss,ordinate)) 
         
         #3. Creation of edges
 
@@ -53,14 +50,13 @@ class EdgeFinder(ACO):
                 G.add_edges_from(liste1+liste2)
         
         G.nodes[(2,2)]["size"] = (abscmax,ordmax)
-        return (G,L)
+        return (G)
 
     def __init__(self, workGraph: nx.Graph) -> None:
-        a,liste = workGraph
-        super().__init__(a) #Assumes the wanted heuristic matrix is already stored inside the graph...
-        n = len(liste)
-        # Specific initialisation 
-        nx.set_node_attributes(self._graph, 1e-3, "pheromone")
+        super().__init__(workGraph) #Assumes the wanted heuristic matrix is already stored inside the graph...
+        # Specific initialisation
+        self._evaporationLower = 1e-6
+        nx.set_node_attributes(self._graph, self._evaporationLower, "pheromone")
         abs, ord = self._graph.nodes[(2,2)]["size"]
 
         self.alpha = 1
@@ -68,12 +64,12 @@ class EdgeFinder(ACO):
         self.evaporationRate = 0.1
         self._decayCoefficient = 0.05
         self._cycles = 0
+        self._q0 = 0.4
 
         self._consecutiveMoves = 40
-        self._evaporationLower = 1e-4
 
         self._antsByGeneration = 512
-        self._antsLocation = [liste[rd.randint(0,n-1)] for k in range(self._antsByGeneration)]
+        self._antsLocation = [(rd.randrange(2, abs - 3), rd.randrange(2, ord - 3)) for k in range(self._antsByGeneration)]
 
     def LaunchAntCycle(self, iteration: int) -> None:
         self._cycles = self._cycles + 1
@@ -102,7 +98,7 @@ class EdgeFinder(ACO):
                 
     def _PheromoneUpdate(self) -> None:
         for node in self._graph.nodes:
-            self._graph.nodes[node]["pheromone"] = (1 - self._decayCoefficient) * self._graph.nodes[node]["pheromone"] + self._decayCoefficient * self._evaporationLower
+            self._graph.nodes[node]["pheromone"] = (1 - self._decayCoefficient) * self._graph.nodes[node]["pheromone"] + self._evaporationLower * self._decayCoefficient
 
     def _PheromoneInfo(self, start: int, end : int) -> float:
         return self._graph.nodes[end]["pheromone"]
@@ -140,7 +136,7 @@ class EdgeFinder(ACO):
         imgres = Image.new('RGB',(abscmax,ordmax),"black")
         for i in range(2,abscmax-2):
             for j in range(2,ordmax-2):
-                    g = int(255 * (Graph.nodes[(i,j)]["gradient"]))
+                    g = 255 - int(255 * (Graph.nodes[(i,j)]["gradient"]))
                     imgres.putpixel((i,j),(g,g,g))
         imgres.save("res"+str(self._cycles)+".png")
         
