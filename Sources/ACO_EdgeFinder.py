@@ -1,14 +1,14 @@
 import networkx as nx
 import random as rd
-from PIL import Image,ImageOps
 import numpy as np
 import time
+from PIL import Image,ImageOps
 
 from Sources.ACO_Interface import ACO
 
 class EdgeFinder(ACO):
     @staticmethod
-    def graphgenerator(nom, f, neighbourhood, diameter):
+    def GraphGenerator(nom, f, neighbourhood, diameter):
         """Creates a graph with each node representing a pixel, without including the two bordering rows.
         f is the fonction used to calculate the contrast of the neighbourhood of each node.
         neighbourhood has to be a int*int list, for instance following Tian, Yu and Xie definition,
@@ -50,20 +50,20 @@ class EdgeFinder(ACO):
     def __init__(self, workGraph: nx.Graph) -> None:
         super().__init__(workGraph) #Assumes the wanted heuristic matrix is already stored inside the graph...
 
-        # Specific initialisation 
-        nx.set_node_attributes(self._graph, 1e-4, "pheromone")
-        abs, ord = self._graph.nodes[(2,2)]["size"]
-
-        self._alpha = 1.0
-        self._beta = 0.1
-        self._evaporationRate = 0.1
+        # Specific initialisation
+        self._alpha = 1
+        self._beta = 1
+        self._evaporationLower = 1e-4
+        self.evaporationRate = 0.1
         self._decayCoefficient = 0.05
+        self._q0 = 0.4
 
         self._consecutiveMoves = 40
-        self._evaporationLower = 1e-4
-
         self._antsByGeneration = 512
-        self._antsLocation = [(rd.randrange(2, abs - 3), rd.randrange(2, ord - 3)) for k in range(self._antsByGeneration)] #BUG : Not correct initialisation of position : needs dimensions
+
+        nx.set_node_attributes(self._graph, self._evaporationLower, "pheromone")
+        abs, ord = self._graph.nodes[(2,2)]["size"]
+        self._antsLocation = [(rd.randrange(2, abs - 3), rd.randrange(2, ord - 3)) for k in range(self._antsByGeneration)]
 
     def LaunchAntCycle(self, iteration: int) -> None:
         for i in range(iteration):
@@ -93,7 +93,7 @@ class EdgeFinder(ACO):
                 
     def _PheromoneUpdate(self) -> None:
         for node in self._graph.nodes:
-            self._graph.nodes[node]["pheromone"] = (1 - self._decayCoefficient) * self._graph.nodes[node]["pheromone"] + self._decayCoefficient * self._evaporationLower
+            self._graph.nodes[node]["pheromone"] = (1 - self._decayCoefficient) * self._graph.nodes[node]["pheromone"] + self._evaporationLower * self._decayCoefficient
 
     def _PheromoneInfo(self, start: int, end : int) -> float:
         return self._graph.nodes[end]["pheromone"]
