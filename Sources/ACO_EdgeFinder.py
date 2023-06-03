@@ -20,57 +20,47 @@ class EdgeFinder(ACO):
         ordmax, abscmax = img.shape
 
         #2. graph initialization and creation of weighted nodes
-        G = nx.DiGraph()
+        G = nx.Graph()
         
-        def RawContrast(x,y) :
+        def Contrast(x, y):
             sum = 0
             for (i,j) in neighbourhood:
                 sum += abs(img[y+j,x+i]-img[y-j,x-i]) #numpy arrays follow the structure [line,column] ie [ordinate,column]
-            return sum
-        
-        def Contrast(x, y, norm):
-            return f(RawContrast(x, y) / norm)
-    
-        maxRawContrast = 0.0
-        for i in range(diameter,abscmax-diameter):
-            for j in range(diameter,ordmax-diameter):
-                if RawContrast(i,j) > maxRawContrast : maxRawContrast = RawContrast(i,j)
+            return f(sum)
 
         sumContrast = 0.0
         for i in range(diameter,abscmax-diameter):
             for j in range(diameter,ordmax-diameter):
-                sumContrast += Contrast(i, j, maxRawContrast)
+                sumContrast += Contrast(i, j)
 
         for absciss in range(diameter,abscmax-diameter):
             for ordinate in range(diameter,ordmax-diameter):
-                G.add_node((absciss,ordinate), heuristic = (Contrast(absciss, ordinate, maxRawContrast)/sumContrast))
+                G.add_node((absciss,ordinate), heuristic = Contrast(absciss, ordinate)/sumContrast)
         
         #3. Creation of edges
-
         for absciss in range(diameter,abscmax-diameter):
             for ordinate in range(diameter,ordmax-diameter):
-                liste1 = [((absciss,ordinate),(absciss+i,ordinate+j)) for (i,j) in neighbourhood if (absciss+i)<= abscmax-3 and (absciss+i) >= 2 and (ordinate+j) <= ordmax-3 and (ordinate+j) >= 2 ]
-                liste2 = [((absciss,ordinate),(absciss-i,ordinate-j)) for (i,j) in neighbourhood if (absciss-i)<= abscmax-3 and (absciss-i) >= 2 and (ordinate-j) <= ordmax-3 and (ordinate-j) >= 2 ]
-                G.add_edges_from(liste1+liste2)
+                liste1 = [((absciss,ordinate),(absciss+i,ordinate+j)) for (i,j) in neighbourhood if (absciss+i) < abscmax-diameter and (absciss+i) >= diameter and (ordinate+j) < ordmax-diameter and (ordinate+j) >= diameter]
+                liste2 = [((absciss,ordinate),(absciss-i,ordinate-j)) for (i,j) in neighbourhood if (absciss-i) < abscmax-diameter and (absciss-i) >= diameter and (ordinate-j) < ordmax-diameter and (ordinate-j) >= diameter]
+                G.add_edges_from(liste1 + liste2)
         
-        G.nodes[(2,2)]["size"] = (abscmax,ordmax)
+        G.nodes[(diameter,diameter)]["size"] = (abscmax,ordmax)
         return G
 
     def __init__(self, workGraph: nx.Graph) -> None:
         super().__init__(workGraph) #Assumes the wanted heuristic matrix is already stored inside the graph...
 
         # Specific initialisation 
-        nx.set_node_attributes(self._graph, 1e-3, "pheromone")
+        nx.set_node_attributes(self._graph, 1e-4, "pheromone")
         abs, ord = self._graph.nodes[(2,2)]["size"]
 
-        self.alpha = 10.0
-        self._beta = 1.0
+        self._alpha = 1.0
+        self._beta = 0.1
         self._evaporationRate = 0.1
         self._decayCoefficient = 0.05
-        self._successFactor = 0.9
 
         self._consecutiveMoves = 40
-        self._evaporationLower = 1e-3
+        self._evaporationLower = 1e-4
 
         self._antsByGeneration = 512
         self._antsLocation = [(rd.randrange(2, abs - 3), rd.randrange(2, ord - 3)) for k in range(self._antsByGeneration)] #BUG : Not correct initialisation of position : needs dimensions
@@ -102,16 +92,6 @@ class EdgeFinder(ACO):
                     (1 - self._evaporationRate) * phero + self._evaporationRate * self._graph.nodes[node]["heuristic"]
                 
     def _PheromoneUpdate(self) -> None:
-        #1 Update "better solutions"
-        self._DetermineUpdateSolutions(); max = 0.0
-        for i in range(len(self._updateSolutions)): 
-            if self._CostFunctionOpt(i) > max : max = self._CostFunctionOpt(i)
-
-        for i in range(len(self._updateSolutions)):
-            for node in self._updateSolutions[i]:
-                self._graph.nodes[node]["pheromone"] *= self._successFactor * self._CostFunctionOpt(i) / max
-
-        #2. Global decay of the nodes
         for node in self._graph.nodes:
             self._graph.nodes[node]["pheromone"] = (1 - self._decayCoefficient) * self._graph.nodes[node]["pheromone"] + self._decayCoefficient * self._evaporationLower
 
@@ -119,8 +99,15 @@ class EdgeFinder(ACO):
         return self._graph.nodes[end]["pheromone"]
 
     def _DetermineAdjacent(self, index: int, partialSolution: list) -> list:
-        current = partialSolution[index]
-        return list(self._graph.neighbors(current)) #ENH : If we could do away with this copy, it could save a lot of space
+        result = []; d = dict()
+        for i in range(index + 1):
+            d[partialSolution[i]] = False
+        
+        for node in self._graph.neighbors(partialSolution[index]):
+            if d.get(node, True) : result.append(node)
+        result = result if len(result) > 0 else list(self._graph.neighbors(partialSolution[index]))
+
+        return result
     
     def _HeuristicInfo(self, start: int, end: int) -> float:
         return self._graph.nodes[end]["heuristic"]
