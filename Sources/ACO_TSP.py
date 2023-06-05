@@ -61,7 +61,7 @@ class TSP(ACO):
                 self._iterationSolutions[ant][round + 1] = next
 
     def _HeuristicInfo(self, start: int, end: int) -> float:
-        return 1.0
+        return 1.0/self._graph.edges[(start, end)]["distance"]
 
     def _DetermineAdjacent(self, index: int, partialSolution: list) -> list:        
         #Method using a hash-map to constant check
